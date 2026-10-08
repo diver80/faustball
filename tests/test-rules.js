@@ -110,15 +110,52 @@ assert.ok(rightTouchFault, '4th touch on right side must trigger fault');
 assert.strictEqual(rightTouchFault.faultType, 'FOUR_TOUCHES');
 assert.strictEqual(rightTouchFault.scoringTeam, 'left');
 
-// Test 8: Out of bounds bounce
+// Test 8: Out of bounds bounce scoring (own court vs opponent court)
+// 8a. Left team shanks ball out on own court (x < 0) -> right team scores
 physics.resetServe('left', 200, 360);
-physics.ball.x = -10; // Landed past left baseline
+physics.hitBall('left', 'p1', 'dig', { vx: -100, vy: -200 });
+physics.ball.x = -10;
 physics.ball.y = 400;
 physics.ball.vy = 200;
 physics.update(0.016);
-const oobFault = physics.checkFault();
-assert.ok(oobFault, 'Landing out of bounds must trigger fault');
-assert.strictEqual(oobFault.faultType, 'OUT_OF_BOUNDS');
+const ownOobFault = physics.checkFault();
+assert.ok(ownOobFault, 'Landing out of bounds on own court must trigger fault');
+assert.strictEqual(ownOobFault.faultType, 'OUT_OF_BOUNDS');
+assert.strictEqual(ownOobFault.scoringTeam, 'right', 'Shank on own side awards point to right team');
+
+// 8b. Left team hits ball across ribbon but it lands long past right baseline (x > court.width) -> right team scores
+physics.resetServe('left', 200, 360);
+physics.hitBall('left', 'p1', 'spike', { vx: 500, vy: -200 });
+// Ball clears ribbon above ribbon top
+physics.ball.x = 450;
+physics.ball.y = 200;
+physics.update(0.016);
+assert.strictEqual(physics.rallyState.activeTeam, 'right', 'Active team switched to defending team');
+// Ball lands beyond opponent baseline
+physics.ball.x = 820;
+physics.ball.y = 400;
+physics.ball.vy = 200;
+physics.update(0.016);
+const oppOobFault = physics.checkFault();
+assert.ok(oppOobFault, 'Ball landing beyond opponent court baseline must trigger fault');
+assert.strictEqual(oppOobFault.faultType, 'OUT_OF_BOUNDS');
+assert.strictEqual(oppOobFault.scoringTeam, 'right', 'Hitting out past opponent baseline must award point to opponent (right)');
+
+// 8c. Right team hits ball across ribbon and it lands long past left baseline (x < 0) -> left team scores
+physics.resetServe('right', 600, 360);
+physics.hitBall('right', 'pr1', 'spike', { vx: -500, vy: -200 });
+physics.ball.x = 350;
+physics.ball.y = 200;
+physics.update(0.016);
+assert.strictEqual(physics.rallyState.activeTeam, 'left');
+physics.ball.x = -15;
+physics.ball.y = 400;
+physics.ball.vy = 200;
+physics.update(0.016);
+const rightOppOobFault = physics.checkFault();
+assert.ok(rightOppOobFault);
+assert.strictEqual(rightOppOobFault.faultType, 'OUT_OF_BOUNDS');
+assert.strictEqual(rightOppOobFault.scoringTeam, 'left', 'Right team hitting out awards point to left');
 
 // Test 9: resetServe clears fault
 physics.resetServe('right', 600, 360);

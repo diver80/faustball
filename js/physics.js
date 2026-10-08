@@ -55,6 +55,7 @@ class FaustballPhysics {
     };
 
     this.currentFault = null;
+    this.lastHitTeam = 'left';
 
     // Optional event callbacks for audio synthesis & visual particles
     this.onBounce = null;     // (x, y, vy)
@@ -81,6 +82,7 @@ class FaustballPhysics {
    */
   resetServe(servingTeam = 'left', serverX = null, serverY = null) {
     this.currentFault = null;
+    this.lastHitTeam = servingTeam;
     this.rallyState = {
       activeTeam: servingTeam,
       bouncesSinceTouch: 0,
@@ -110,6 +112,7 @@ class FaustballPhysics {
   hitBall(team, player, type = 'normal', direction = null) {
     this.rallyState.lastHitPlayer = player;
     this.rallyState.activeTeam = team;
+    this.lastHitTeam = team;
     this.rallyState.bouncesSinceTouch = 0;
 
     // Increment touches and verify 3-touch limit
@@ -209,7 +212,7 @@ class FaustballPhysics {
       const t = dx !== 0 ? (ribbonX - prevX) / dx : 0;
       const crossY = prevY + t * (nextY - prevY);
 
-      if (crossY < ribbonTop) {
+      if (crossY + (this.ball.radius || 0) < ribbonTop) {
         // High ball cleanly cleared the top of the ribbon tape
         if (prevX <= ribbonX && nextX > ribbonX) {
           this.rallyState.activeTeam = 'right';
@@ -234,7 +237,7 @@ class FaustballPhysics {
         }
 
         if (!this.currentFault) {
-          const scoringTeam = this.rallyState.activeTeam === 'left' ? 'right' : 'left';
+          const scoringTeam = this.lastHitTeam === 'left' ? 'right' : 'left';
           this.currentFault = {
             faultType: 'RIBBON_FAULT',
             scoringTeam,
@@ -248,11 +251,12 @@ class FaustballPhysics {
       }
     } else {
       // Direct positioning or discrete frame crossing over ribbon top
-      if (nextX > ribbonX && this.rallyState.activeTeam === 'left' && nextY < ribbonTop) {
+      const ballClearY = nextY + (this.ball.radius || 0);
+      if (nextX > ribbonX && this.rallyState.activeTeam === 'left' && ballClearY < ribbonTop) {
         this.rallyState.activeTeam = 'right';
         this.rallyState.bouncesSinceTouch = 0;
         this.rallyState.touchesTeamRight = 0;
-      } else if (nextX < ribbonX && this.rallyState.activeTeam === 'right' && nextY < ribbonTop) {
+      } else if (nextX < ribbonX && this.rallyState.activeTeam === 'right' && ballClearY < ribbonTop) {
         this.rallyState.activeTeam = 'left';
         this.rallyState.bouncesSinceTouch = 0;
         this.rallyState.touchesTeamLeft = 0;
@@ -275,7 +279,7 @@ class FaustballPhysics {
       // Check boundary & bounce rules
       if (this.ball.x < 0 || this.ball.x > this.court.width) {
         if (!this.currentFault) {
-          const scoringTeam = this.rallyState.activeTeam === 'left' ? 'right' : 'left';
+          const scoringTeam = this.lastHitTeam === 'left' ? 'right' : 'left';
           this.currentFault = {
             faultType: 'OUT_OF_BOUNDS',
             scoringTeam,
