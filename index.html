@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Faustball World Tour 2026 — Retro-Arcade Fistball</title>
+  <meta name="description" content="Experience fast-paced 2v2 Faustball (Fistball) arcade action! Master the authentic 1-bounce rule, grass diving saves, and power fist smashes.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🏐</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="game-header">
+    <div class="title-badge">🏆 IFA WORLD TOUR 2026 • OFFICIAL FAUSTBALL ARCADE 🏆</div>
+    <h1 class="game-title">FAUSTBALL WORLD TOUR</h1>
+    <p class="game-subtitle">The world's oldest & fastest field sport: <strong>1 Bounce on Grass Allowed</strong> • <strong>3 Touches Max</strong> • <strong>2m Center Leine</strong></p>
+  </header>
+
+  <main class="arcade-wrapper">
+    <!-- HUD Header Bar -->
+    <div class="game-hud">
+      <div class="hud-item">
+        <span class="hud-label">Score</span>
+        <span id="scoreDisplay" class="hud-value gold">0 - 0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Sets</span>
+        <span id="setsDisplay" class="hud-value green">0 - 0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Touches</span>
+        <span id="touchesDisplay" class="hud-value cyan">0 / 3</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Stage</span>
+        <span id="stageDisplay" class="hud-value">🇨🇭 Quarterfinal</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Special</span>
+        <div class="special-meter-wrap">
+          <div id="specialMeterFill" class="special-meter-fill"></div>
+        </div>
+      </div>
+      <div class="hud-controls">
+        <button id="biergartenBtn" class="btn-small" aria-label="Toggle Biergarten Mode">🍺 Biergarten: OFF</button>
+        <button id="muteBtn" class="btn-small" aria-label="Toggle Sound">🔊 Sound: ON</button>
+        <button id="pauseBtn" class="btn-small" aria-label="Pause Game">⏸️ Pause</button>
+      </div>
+    </div>
+
+    <!-- Canvas Container -->
+    <div class="canvas-container">
+      <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+      <!-- 1. Start / Character Select Modal -->
+      <div id="startModal" class="modal-overlay">
+        <div class="modal-content">
+          <h2 class="modal-title">🏐 WELCOME TO FAUSTBALL!</h2>
+          <p class="modal-subtitle">
+            Lead your 2-player squad through the International Faustball Championship! The ball is allowed to <strong>bounce once on grass between hits</strong>. Set the ball near the 2m center ribbon and smash it home!
+          </p>
+
+          <div class="character-selection-title">CHOOSE YOUR STAR ATHLETE:</div>
+          <div class="character-grid">
+            <div class="character-card selected" data-char="cannon">
+              <span class="char-icon">💥</span>
+              <span class="char-name">The Cannon</span>
+              <span class="char-perk">+25% Spike speed & high jump apex</span>
+            </div>
+            <div class="character-card" data-char="iron_wall">
+              <span class="char-icon">🛡️</span>
+              <span class="char-name">The Iron Wall</span>
+              <span class="char-perk">50% Faster grass dives & wide reach</span>
+            </div>
+            <div class="character-card" data-char="spin_master">
+              <span class="char-icon">🌪️</span>
+              <span class="char-name">The Spin Master</span>
+              <span class="char-perk">Drop shots & curved swerve spikes</span>
+            </div>
+          </div>
+
+          <div class="biergarten-toggle-wrap">
+            <input type="checkbox" id="biergartenModalToggle">
+            <label for="biergartenModalToggle">🍺 Play in <strong>Biergarten Mode</strong> (Inverted Left ↔ Right + 1.25x Score Multiplier!)</label>
+          </div>
+
+          <button id="startBtn" class="btn-primary">START WORLD TOUR MATCH 🚀</button>
+        </div>
+      </div>
+
+      <!-- 2. Stage Victory Modal -->
+      <div id="stageWinModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <h2 class="modal-title" style="color: #22c55e;">🎉 STAGE VICTORY!</h2>
+          <p class="modal-subtitle">
+            You defeated <strong id="defeatedTeamName">Switzerland 🇨🇭</strong> and advanced to the next round!
+          </p>
+          <div class="stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">Total Points</span>
+              <span id="stageWinPoints" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Next Opponent</span>
+              <span id="nextOpponentName" class="stat-val" style="font-size: 14px; color: #38bdf8;">Austria 🇦🇹</span>
+            </div>
+          </div>
+          <button id="nextStageBtn" class="btn-primary">CONTINUE TO NEXT STAGE 🏆</button>
+        </div>
+      </div>
+
+      <!-- 3. Match Lost Modal -->
+      <div id="gameOverModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <h2 class="modal-title" style="color: #ef4444;">💥 MATCH OVER!</h2>
+          <p class="modal-subtitle">
+            The opponent team secured the final set. Dust the grass off your knees and try again!
+          </p>
+          <div class="stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">Points Earned</span>
+              <span id="finalScoreVal" class="stat-val">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Best Record</span>
+              <span id="bestScoreVal" class="stat-val">0</span>
+            </div>
+          </div>
+          <button id="retryBtn" class="btn-primary">REMATCH OPPONENT 🔄</button>
+        </div>
+      </div>
+
+      <!-- 4. World Championship Trophy Modal -->
+      <div id="trophyModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <h2 class="modal-title" style="color: #f59e0b;">🏆 WORLD CHAMPIONS 2026!</h2>
+          <p class="modal-subtitle">
+            Unbelievable! You conquered Switzerland, Austria, Brazil, and Germany to lift the World Faustball Cup!
+          </p>
+          <div class="stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">Championship Score</span>
+              <span id="trophyScoreVal" class="stat-val">0</span>
+            </div>
+          </div>
+          <button id="playAgainBtn" class="btn-primary">DEFEND YOUR TITLE 🏆</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Touch Controller -->
+    <div class="mobile-controls" id="mobileControls">
+      <div class="touch-cluster-dpad">
+        <button class="touch-btn" id="touchLeft">◀ LEFT</button>
+        <button class="touch-btn" id="touchRight">RIGHT ▶</button>
+      </div>
+      <div class="touch-cluster-actions">
+        <button class="touch-btn" id="touchJump">JUMP ⬆️</button>
+        <button class="touch-btn" id="touchDive">DIVE ⬇️</button>
+        <button class="touch-btn hit" id="touchHit">HIT 💥</button>
+        <button class="touch-btn special" id="touchSpecial">SPECIAL ⭐</button>
+      </div>
+    </div>
+
+    <!-- Game Rules & Controls Guide -->
+    <footer class="game-info-footer">
+      <h3>📖 Authentic Faustball (Fistball) Rules & Controls</h3>
+      <p>Faustball is an athletic grass sport dating back to ancient Rome, standardized in Germany and Austria:</p>
+      <ul>
+        <li><strong>The 1-Bounce Rule:</strong> The ball is permitted to bounce on the grass <em>once</em> between consecutive touches. A second consecutive bounce without a hit awards a point to the opponent.</li>
+        <li><strong>3 Touches Max:</strong> Touch 1: Defense dig/reception -> Touch 2: High setter pass -> Touch 3: Spiking punch or strategic drive over the ribbon.</li>
+        <li><strong>Center Ribbon ("Die Leine"):</strong> Suspended at 2.0m height with red/white stripes. Hitting the ribbon or passing below is an immediate fault.</li>
+        <li><strong>Controls:</strong> <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to run • <kbd>↑</kbd> or <kbd>W</kbd> to Jump • <kbd>↓</kbd> or <kbd>S</kbd> to Dive ("Hechtbagger") • <kbd>Space</kbd> to Hit/Spike • <kbd>Shift</kbd> to unleash Special Ability!</li>
+      </ul>
+    </footer>
+  </main>
+
+  <!-- Modular Scripts -->
+  <script src="js/physics.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/game.js"></script>
+
+  <script>
+    // Game initialization and DOM bridge
+    (function () {
+      const canvas = document.getElementById('gameCanvas');
+      const game = new FaustballGame({ canvas, width: 800, height: 450 });
+
+      // HUD Elements
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const setsDisplay = document.getElementById('setsDisplay');
+      const touchesDisplay = document.getElementById('touchesDisplay');
+      const stageDisplay = document.getElementById('stageDisplay');
+      const specialMeterFill = document.getElementById('specialMeterFill');
+      const biergartenBtn = document.getElementById('biergartenBtn');
+      const muteBtn = document.getElementById('muteBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+
+      // Modals
+      const startModal = document.getElementById('startModal');
+      const stageWinModal = document.getElementById('stageWinModal');
+      const gameOverModal = document.getElementById('gameOverModal');
+      const trophyModal = document.getElementById('trophyModal');
+      const startBtn = document.getElementById('startBtn');
+      const nextStageBtn = document.getElementById('nextStageBtn');
+      const retryBtn = document.getElementById('retryBtn');
+      const playAgainBtn = document.getElementById('playAgainBtn');
+      const biergartenToggle = document.getElementById('biergartenModalToggle');
+
+      let selectedChar = 'cannon';
+
+      // Character selection clicks
+      document.querySelectorAll('.character-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedChar = card.dataset.char;
+        });
+      });
+
+      // Start match
+      startBtn.addEventListener('click', () => {
+        const isBier = biergartenToggle.checked;
+        game.startMatch(selectedChar, isBier);
+        startModal.style.display = 'none';
+        updateBiergartenBtnUI();
+      });
+
+      // Next stage
+      nextStageBtn.addEventListener('click', () => {
+        game.advanceTournament();
+        stageWinModal.style.display = 'none';
+      });
+
+      // Rematch
+      retryBtn.addEventListener('click', () => {
+        game.startMatch(selectedChar, game.isBiergarten);
+        gameOverModal.style.display = 'none';
+      });
+
+      // Play Again
+      playAgainBtn.addEventListener('click', () => {
+        trophyModal.style.display = 'none';
+        startModal.style.display = 'flex';
+      });
+
+      // Biergarten button
+      function updateBiergartenBtnUI() {
+        if (game.isBiergarten) {
+          biergartenBtn.textContent = '🍺 Biergarten: ON';
+          biergartenBtn.classList.add('active');
+        } else {
+          biergartenBtn.textContent = '🍺 Biergarten: OFF';
+          biergartenBtn.classList.remove('active');
+        }
+      }
+      biergartenBtn.addEventListener('click', () => {
+        game.toggleBiergarten();
+        updateBiergartenBtnUI();
+      });
+
+      // Mute button
+      muteBtn.addEventListener('click', () => {
+        if (game.audio) {
+          const isMuted = game.audio.toggleMute();
+          muteBtn.textContent = isMuted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
+        }
+      });
+
+      // Pause button
+      pauseBtn.addEventListener('click', () => {
+        if (game.state === game.STATE_PAUSED) {
+          game.state = game.previousState;
+          pauseBtn.textContent = '⏸️ Pause';
+        } else if (game.state === game.STATE_RALLY || game.state === game.STATE_SERVING) {
+          game.previousState = game.state;
+          game.state = game.STATE_PAUSED;
+          pauseBtn.textContent = '▶️ Resume';
+        }
+      });
+
+      // Keyboard listeners
+      window.addEventListener('keydown', e => {
+        game.keys[e.code] = true;
+        if (e.code === 'KeyP' || e.code === 'Escape') {
+          pauseBtn.click();
+        }
+      });
+
+      window.addEventListener('keyup', e => {
+        game.keys[e.code] = false;
+      });
+
+      // Mobile Touch Buttons wiring
+      function bindTouch(btnId, prop) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('touchstart', e => { e.preventDefault(); game.touchControls[prop] = true; });
+        btn.addEventListener('touchend', e => { e.preventDefault(); game.touchControls[prop] = false; });
+        btn.addEventListener('mousedown', () => { game.touchControls[prop] = true; });
+        btn.addEventListener('mouseup', () => { game.touchControls[prop] = false; });
+      }
+      bindTouch('touchLeft', 'left');
+      bindTouch('touchRight', 'right');
+      bindTouch('touchJump', 'jump');
+      bindTouch('touchDive', 'dive');
+      bindTouch('touchHit', 'hit');
+      bindTouch('touchSpecial', 'special');
+
+      // Main Loop
+      let lastTime = performance.now();
+      function gameLoop(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        game.update(dt);
+        game.render();
+
+        // Update HUD
+        scoreDisplay.textContent = `${game.scoreLeft} - ${game.scoreRight}`;
+        setsDisplay.textContent = `${game.setsLeft} - ${game.setsRight}`;
+
+        const touches = game.physics && game.physics.rallyState ? game.physics.rallyState.touchesTeamLeft : 0;
+        touchesDisplay.textContent = `${touches} / 3`;
+
+        const curStage = game.tournamentStages[game.tournamentStage];
+        stageDisplay.textContent = curStage ? curStage.name : 'Final';
+
+        specialMeterFill.style.width = `${game.specialMeter}%`;
+        if (game.canActivateSpecial()) {
+          specialMeterFill.classList.add('ready');
+        } else {
+          specialMeterFill.classList.remove('ready');
+        }
+
+        // Check modal triggers
+        if (game.state === game.STATE_MATCH_WON) {
+          document.getElementById('defeatedTeamName').textContent = curStage.name;
+          document.getElementById('stageWinPoints').textContent = game.totalTournamentPoints;
+          const nextStage = game.tournamentStages[game.tournamentStage + 1];
+          document.getElementById('nextOpponentName').textContent = nextStage ? nextStage.name : 'World Cup Final';
+          stageWinModal.style.display = 'flex';
+        } else if (game.state === game.STATE_MATCH_LOST) {
+          document.getElementById('finalScoreVal').textContent = game.totalTournamentPoints;
+          document.getElementById('bestScoreVal').textContent = game.highScore;
+          gameOverModal.style.display = 'flex';
+        } else if (game.state === game.STATE_TOURNAMENT_WIN) {
+          document.getElementById('trophyScoreVal').textContent = game.totalTournamentPoints;
+          trophyModal.style.display = 'flex';
+        }
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>
