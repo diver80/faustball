@@ -185,36 +185,44 @@ class FaustballAI {
       if (p.x > court.width - 25) p.x = court.width - 25;
     }
 
-    // 2. Cooperative Teammate AI (Left side, index 1)
-    if (leftPlayers.length > 1 && !leftPlayers[1].isUser) {
-      const teammate = leftPlayers[1];
-      const user = leftPlayers[0];
+    // 2. Cooperative Teammate AI (Left side)
+    const user = leftPlayers.find(p => p.isUser) || leftPlayers[0];
+    const teammate = leftPlayers.find(p => !p.isUser);
+    if (teammate) {
       const teamTouches = physics.rallyState ? physics.rallyState.touchesTeamLeft : 0;
 
       if (activeTeam === 'left') {
-        // If ball on our side:
         const userDistToLanding = Math.abs(user.x - landing.x);
         const teammateDistToLanding = Math.abs(teammate.x - landing.x);
 
         if (teamTouches === 0) {
-          // Touch 1: Defense reception
-          if (landing.x < 210 || userDistToLanding < teammateDistToLanding) {
-            // User covers back court; teammate holds front setter zone
-            this._moveToward(teammate, 290, 180, dt);
-          } else {
-            // Teammate goes for the dig
+          // Touch 1: Dig/Reception
+          if (teammateDistToLanding < userDistToLanding - 30) {
             this._interceptBall(teammate, ball, landing, 'left', dt, physics, 1);
+          } else {
+            const supportX = teammate.x > user.x ? 290 : 160;
+            this._moveToward(teammate, supportX, 180, dt);
           }
         } else if (teamTouches === 1) {
-          // Touch 2: Set the ball near the ribbon for user spike!
-          this._interceptBall(teammate, ball, landing, 'left', dt, physics, 2);
+          // Touch 2: Set the ball near the ribbon for user spike
+          if (teammateDistToLanding < userDistToLanding) {
+            this._interceptBall(teammate, ball, landing, 'left', dt, physics, 2);
+          } else {
+            this._moveToward(teammate, 310, 190, dt);
+          }
         } else {
-          // Touch 3: User should spike, teammate covers back
-          this._moveToward(teammate, 180, 170, dt);
+          // Touch 3: Attack / Spike
+          if (teammateDistToLanding < userDistToLanding - 50 && teammate.x > 240) {
+            this._interceptBall(teammate, ball, landing, 'left', dt, physics, 3);
+          } else {
+            const coverX = teammate.x > user.x ? 280 : 160;
+            this._moveToward(teammate, coverX, 170, dt);
+          }
         }
       } else {
-        // Defend against opponent return
-        this._moveToward(teammate, 280, 160, dt);
+        // Defensive coverage when ball is in right court
+        const defTarget = teammate.x > user.x ? 280 : 160;
+        this._moveToward(teammate, defTarget, 160, dt);
       }
     }
 
@@ -276,7 +284,6 @@ class FaustballAI {
 
     const speed = tier ? tier.reactionSpeed : 200;
     const dist = landing.x - player.x;
-    const ribbonX = physics.court.ribbonX ?? 400;
 
     // Dive trigger check: ball is dropping fast, distance is large
     if (tier && landing.t < 0.28 && Math.abs(dist) > 55 && Math.random() < tier.diveProbability) {
@@ -320,7 +327,6 @@ class FaustballAI {
           if (tier && Math.random() < tier.jumpProbability) {
             this.triggerJump(player, 400);
           }
-          // Target left back corner or drop right over ribbon
           const isDrop = Math.random() < 0.25;
           const spikeVx = isDrop ? -180 : -(power * (0.8 + Math.random() * 0.4));
           const spikeVy = isDrop ? -280 : -140 - Math.random() * 80;

@@ -1,43 +1,43 @@
 /**
- * SpriteRenderer - Procedural Canvas 2D Graphics Engine for Faustball
+ * SpriteRenderer - High-DPI Procedural Canvas 2D Graphics Engine
  *
- * Zero external image assets required - 100% vector & procedural canvas rendering.
- * Features:
- * - Lush manicured grass court with alternating mowing stripes and crisp white chalk lines
- * - Center ribbon tape ("Die Leine") at official height with red/white diagonal hazard stripes
- * - Dynamic animated athletes (running cycle, jump spike windup & smash, grass diving "Hechtbagger")
- * - Ball rotation with realistic altitude drop-shadow
- * - Grandstand spectators and stadium environment
- * - Particle engine for grass turf kick-ups, fist impact sparks, and flaming smash trails
- * - Biergarten Mode visual stumble sway and beer foam bubbles
+ * Renders complete retro-arcade Faustball stadium visuals:
+ * - Grandstand spectators with wave motion and fluttering country flags
+ * - Lawnmower-striped grass turf pitch with crisp white chalk boundary lines
+ * - Alternating red/white striped 2m center ribbon tape ("Die Leine")
+ * - 2D athletic player sprites (running, jumping, diving "Hechtbagger", spiking)
+ * - Overhead "YOU" (P1) floating indicator & golden turf ring for active user player
+ * - Serving prompt & controls HUD overlay
+ * - Dynamic ground drop shadows with altitude scaling
+ * - Particle system (turf spray, impact bursts, flaming spike trails)
+ *
+ * Exported for Node.js (CommonJS) and Browser (window.SpriteRenderer).
  */
 
 class SpriteRenderer {
   constructor() {
     this.animTime = 0;
     this.particles = [];
-    this.ballRotation = 0;
   }
 
   /**
-   * Update animation frame timers, physics particles, and ball rotation
+   * Advance animations & particle physics
    * @param {number} dt - delta time in seconds
    */
   update(dt) {
     this.animTime += dt;
 
-    // Update particles
+    // Update active particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      p.life -= dt * (p.decay || 1.8);
+      p.x += (p.vx || 0) * dt;
+      p.y += (p.vy || 0) * dt;
 
-      // Particle gravity
-      if (p.gravity) {
-        p.vy += p.gravity * dt;
+      if (p.type === 'turf') {
+        p.vy = (p.vy || 0) + 700 * dt; // gravity on grass clumps
       }
 
-      p.life -= dt / p.maxLife;
       if (p.life <= 0) {
         this.particles.splice(i, 1);
       }
@@ -45,80 +45,75 @@ class SpriteRenderer {
   }
 
   /**
-   * Spawn grass turf particles on dives or sudden foot plants
+   * Spawn grass turf particles on bounce, dive, or slide
    * @param {number} x
    * @param {number} y
-   * @param {number} [count=8]
+   * @param {number} [count=6]
    */
-  spawnTurfKick(x, y, count = 8) {
-    const turfColors = ['#15803d', '#166534', '#4ade80', '#854d0e', '#713f12'];
+  spawnTurfKick(x, y, count = 6) {
+    const turfColors = ['#22c55e', '#16a34a', '#15803d', '#84cc16'];
     for (let i = 0; i < count; i++) {
-      const angle = Math.PI + (Math.random() - 0.5) * 1.6;
-      const speed = 70 + Math.random() * 140;
       this.particles.push({
-        x: x + (Math.random() - 0.5) * 10,
-        y: y - Math.random() * 4,
-        vx: Math.cos(angle) * speed,
-        vy: -Math.abs(Math.sin(angle) * speed * 0.9),
-        gravity: 520,
+        x: x + (Math.random() - 0.5) * 16,
+        y: y - 2,
+        vx: (Math.random() - 0.5) * 180,
+        vy: -80 - Math.random() * 160,
         size: 2.5 + Math.random() * 2.5,
-        color: turfColors[Math.floor(Math.random() * turfColors.length)],
         life: 1.0,
-        maxLife: 0.45 + Math.random() * 0.35,
+        decay: 2.2,
+        color: turfColors[Math.floor(Math.random() * turfColors.length)],
         type: 'turf'
       });
     }
   }
 
   /**
-   * Spawn flaming smash trail for The Cannon's power spikes
-   * @param {number} x
-   * @param {number} y
-   */
-  spawnFlameTrail(x, y) {
-    const flameColors = ['#f59e0b', '#ef4444', '#fbbf24', '#f97316'];
-    for (let i = 0; i < 3; i++) {
-      this.particles.push({
-        x: x + (Math.random() - 0.5) * 8,
-        y: y + (Math.random() - 0.5) * 8,
-        vx: (Math.random() - 0.5) * 30,
-        vy: -20 - Math.random() * 40,
-        gravity: 0,
-        size: 3 + Math.random() * 3,
-        color: flameColors[Math.floor(Math.random() * flameColors.length)],
-        life: 1.0,
-        maxLife: 0.25 + Math.random() * 0.2,
-        type: 'flame'
-      });
-    }
-  }
-
-  /**
-   * Spawn golden impact burst on ball strike
+   * Spawn impact burst on ball hit or ribbon collision
    * @param {number} x
    * @param {number} y
    */
   spawnImpactBurst(x, y) {
-    for (let i = 0; i < 10; i++) {
-      const angle = (Math.PI * 2 * i) / 10 + (Math.random() - 0.5) * 0.4;
-      const speed = 90 + Math.random() * 100;
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.4;
+      const speed = 70 + Math.random() * 120;
       this.particles.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        gravity: 150,
-        size: 2.5 + Math.random() * 2,
-        color: '#fef08a',
+        size: 3 + Math.random() * 2,
         life: 1.0,
-        maxLife: 0.28,
+        decay: 3.5,
+        color: '#fbbf24',
         type: 'spark'
       });
     }
   }
 
   /**
-   * Render the arena pitch, grandstands, crowd, chalk lines, and the center ribbon
+   * Spawn flaming rocket trail on special ability spike
+   * @param {number} x
+   * @param {number} y
+   */
+  spawnFlameTrail(x, y) {
+    const flameColors = ['#ef4444', '#f97316', '#fbbf24', '#ffffff'];
+    for (let i = 0; i < 2; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 8,
+        vx: (Math.random() - 0.5) * 40,
+        vy: (Math.random() - 0.5) * 40,
+        size: 4 + Math.random() * 4,
+        life: 1.0,
+        decay: 4.0,
+        color: flameColors[Math.floor(Math.random() * flameColors.length)],
+        type: 'flame'
+      });
+    }
+  }
+
+  /**
+   * Render complete stadium pitch and arena surroundings
    */
   drawPitch(ctx, court, width, height) {
     const groundY = court.groundY ?? 400;
@@ -126,27 +121,19 @@ class SpriteRenderer {
     const ribbonHeight = court.ribbonHeight ?? 120;
     const ribbonTop = groundY - ribbonHeight;
 
-    // 1. Stadium Sky & Grandstand Background
-    ctx.fillStyle = '#0f172a'; // Deep evening stadium sky
+    // 1. Sky & Grandstand Spectators
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, width, groundY);
 
-    // Subtle arena light glow
-    if (typeof ctx.createRadialGradient === 'function') {
-      const grad = ctx.createRadialGradient(width / 2, 80, 50, width / 2, 80, 400);
-      grad.addColorStop(0, 'rgba(56, 189, 248, 0.22)');
-      grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, groundY);
-    }
-
-    // Grandstand tier / fence
+    // Grandstand bleachers
     ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, groundY - 180, width, 90);
+    ctx.fillStyle = '#334155';
     ctx.fillRect(0, groundY - 140, width, 50);
 
-    // Spectator heads in stands
-    const spectatorColors = ['#f43f5e', '#3b82f6', '#eab308', '#10b981', '#a855f7', '#f97316', '#e2e8f0'];
-    ctx.fillStyle = '#334155';
-    for (let sx = 15; sx < width - 15; sx += 18) {
+    // Spectator crowd dots
+    const spectatorColors = ['#f87171', '#60a5fa', '#facc15', '#4ade80', '#c084fc', '#f472b6'];
+    for (let sx = 10; sx < width; sx += 18) {
       const bob = Math.sin(this.animTime * 3 + sx * 0.1) * 2;
       const cIdx = Math.floor(Math.abs(Math.sin(sx * 99)) * spectatorColors.length);
       ctx.fillStyle = spectatorColors[cIdx];
@@ -229,7 +216,6 @@ class SpriteRenderer {
 
     // The Ribbon Tape itself with alternating red & white stripes
     const ribbonThickness = 6;
-    const ribbonHalfW = width / 2;
     const flutter = Math.sin(this.animTime * 4) * 1.5;
 
     ctx.save();
@@ -263,7 +249,52 @@ class SpriteRenderer {
   }
 
   /**
-   * Render an animated player sprite
+   * Render arcade HUD overlay on canvas for serving & player prompts
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {'left'|'right'} servingTeam
+   * @param {number} width
+   * @param {number} height
+   */
+  drawServingPrompt(ctx, servingTeam, width, height) {
+    ctx.save();
+    const bob = Math.sin(this.animTime * 6) * 3;
+
+    if (servingTeam === 'left') {
+      // User's team serves
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.fillRect(width / 2 - 210, 68, 420, 48);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(width / 2 - 210, 68, 420, 48);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('👉 YOUR SERVE! Press [SPACE] or Tap HIT', width / 2, 85 + bob * 0.5);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText('Move: A/D or ← → | Jump: W or ↑ | Switch: Q', width / 2, 103);
+    } else {
+      // Opponent serves
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.fillRect(width / 2 - 150, 72, 300, 38);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(width / 2 - 150, 72, 300, 38);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⚠️ OPPONENT SERVING...', width / 2, 91);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Render an animated player sprite with clear "YOU" indicator for the user
    */
   drawPlayer(ctx, player, archetype = 'cannon', jerseyConfig = { primary: '#fff', secondary: '#000' }, isBiergarten = false) {
     const x = player.x;
@@ -271,9 +302,24 @@ class SpriteRenderer {
     const facing = player.facing || (x < 400 ? 'right' : 'left');
     const state = player.state || 'idle';
     const isRight = facing === 'right';
+    const isUser = !!player.isUser;
 
     ctx.save();
     ctx.translate(x, y);
+
+    // Glowing circular player aura on grass for the user
+    if (isUser) {
+      const ringRadius = 18 + Math.sin(this.animTime * 6) * 2;
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      if (typeof ctx.ellipse === 'function') {
+        ctx.ellipse(0, 4, ringRadius, 6, 0, 0, Math.PI * 2);
+      } else {
+        ctx.arc(0, 4, ringRadius, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+    }
 
     // Biergarten stumble sway
     if (isBiergarten) {
@@ -286,6 +332,43 @@ class SpriteRenderer {
       ctx.beginPath();
       ctx.arc(0, bubbleY, 3, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // Floating overhead "YOU" (P1) badge indicator (drawn before horizontal flip so text remains upright)
+    if (isUser) {
+      const markerBob = Math.sin(this.animTime * 8) * 3;
+      const markerY = -52 + markerBob;
+
+      ctx.save();
+      // Badge background
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(-22, markerY - 13, 44, 15, 4);
+      } else {
+        ctx.rect(-22, markerY - 13, 44, 15);
+      }
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Text "YOU"
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('YOU', 0, markerY - 5);
+
+      // Downward pointer arrow
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.moveTo(-4, markerY + 2);
+      ctx.lineTo(4, markerY + 2);
+      ctx.lineTo(0, markerY + 7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     }
 
     if (!isRight) {
@@ -421,7 +504,6 @@ class SpriteRenderer {
     const altitude = Math.max(0, groundY - y);
 
     // 1. Dynamic Ground Altitude Drop Shadow
-    // As the ball ascends, its shadow grows larger and more transparent
     const shadowScale = Math.max(0.4, 1.0 - altitude / 350);
     const shadowAlpha = Math.max(0.12, 0.45 - altitude / 500);
 
@@ -429,35 +511,38 @@ class SpriteRenderer {
     ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
     ctx.beginPath();
     if (typeof ctx.ellipse === 'function') {
-      ctx.ellipse(x, groundY + 1, radius * (1.2 + altitude * 0.003), radius * 0.4 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, groundY + 4, radius * 1.8 * shadowScale, radius * 0.7 * shadowScale, 0, 0, Math.PI * 2);
     } else {
-      ctx.arc(x, groundY + 1, radius * shadowScale, 0, Math.PI * 2);
+      ctx.arc(x, groundY + 4, radius * shadowScale, 0, Math.PI * 2);
     }
     ctx.fill();
     ctx.restore();
 
-    // 2. Ball Rotation accumulation
-    const speed = Math.hypot(ball.vx || 0, ball.vy || 0);
-    this.ballRotation += (ball.vx || 0) * 0.005;
-
-    // 3. Rotating Faustball (Classic white/cream ball with contrasting red/black leather seams)
+    // 2. Leather Faustball Body
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(this.ballRotation);
 
-    // White leather body
-    ctx.fillStyle = '#f8fafc';
+    // Subtle spin rotation based on horizontal velocity
+    const rot = (x * 0.05) % (Math.PI * 2);
+    ctx.rotate(rot);
+
+    // White leather sphere with radial 3D lighting gradient
+    let grad = null;
+    if (typeof ctx.createRadialGradient === 'function') {
+      grad = ctx.createRadialGradient(-radius * 0.35, -radius * 0.35, 1, 0, 0, radius);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.7, '#e2e8f0');
+      grad.addColorStop(1, '#94a3b8');
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = '#f8fafc';
+    }
+
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Contrast leather panels
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius * 0.65, 0, Math.PI);
-    ctx.stroke();
-
+    // Stitched leather seam lines (official 12-panel Faustball pattern)
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 1.4;
     ctx.beginPath();

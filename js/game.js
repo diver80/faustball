@@ -4,7 +4,7 @@
  * Integrates:
  * - FaustballPhysics (1-bounce rule, 3-touch limit, ribbon collisions)
  * - SoundEngine (procedural Web Audio API sound effects and fanfares)
- * - SpriteRenderer (high-DPI procedural Canvas 2D graphics)
+ * - SpriteRenderer (high-DPI procedural Canvas 2D graphics with YOU indicator)
  * - FaustballAI (cooperative teammate & tiered opponent bots)
  *
  * Exported for Node.js (CommonJS) and Browser (window.FaustballGame).
@@ -113,6 +113,7 @@ class FaustballGame {
       }
     };
     this.selectedArchetype = 'cannon';
+    this.userRole = options.userRole || 'attacker'; // 'attacker' (front) or 'defender' (back)
 
     // Modifier mode
     this.isBiergarten = false;
@@ -125,7 +126,7 @@ class FaustballGame {
     // Entities
     this.playersLeft = [];
     this.playersRight = [];
-    this._initPlayers();
+    this._initPlayers(this.userRole);
 
     // Input state
     this.keys = {};
@@ -135,11 +136,14 @@ class FaustballGame {
       jump: false,
       dive: false,
       hit: false,
-      special: false
+      special: false,
+      switch: false
     };
+    this._switchCooldown = 0;
 
-    // Animation & timing
-    this.serveCooldown = 1.0;
+    // Serving state
+    this.servingTeam = 'left';
+    this.serveCooldown = 8.0;
     this.pointDelay = 1.2;
     this.lastFrameTime = 0;
 
@@ -156,12 +160,18 @@ class FaustballGame {
     }
   }
 
-  _initPlayers() {
+  _initPlayers(startingRole = 'attacker') {
+    this.userRole = startingRole;
+
     // Left Team (User + Teammate)
+    // Front player (Spiker/Attacker) at x: 290, Back player (Defender/Sweeper) at x: 170
+    const isAttackerUser = (startingRole === 'attacker');
+
     this.playersLeft = [
       {
-        id: 'player_user',
-        isUser: true,
+        id: 'player_back',
+        isUser: !isAttackerUser,
+        role: 'defender',
         x: 170,
         y: this.groundY,
         vx: 0,
@@ -171,8 +181,9 @@ class FaustballGame {
         hitCooldown: 0
       },
       {
-        id: 'player_teammate',
-        isUser: false,
+        id: 'player_front',
+        isUser: isAttackerUser,
+        role: 'attacker',
         x: 290,
         y: this.groundY,
         vx: 0,
@@ -188,6 +199,7 @@ class FaustballGame {
       {
         id: 'opp_front',
         isUser: false,
+        role: 'attacker',
         x: 510,
         y: this.groundY,
         vx: 0,
@@ -199,6 +211,7 @@ class FaustballGame {
       {
         id: 'opp_back',
         isUser: false,
+        role: 'defender',
         x: 650,
         y: this.groundY,
         vx: 0,
@@ -208,6 +221,32 @@ class FaustballGame {
         hitCooldown: 0
       }
     ];
+  }
+
+  /**
+   * Switch active user control between Front (Attacker) and Back (Defender) player
+   * @returns {Object} Newly active user player entity
+   */
+  switchUserPlayer() {
+    if (!this.playersLeft || this.playersLeft.length < 2) return null;
+    const p0 = this.playersLeft[0];
+    const p1 = this.playersLeft[1];
+
+    p0.isUser = !p0.isUser;
+    p1.isUser = !p1.isUser;
+    p0.vx = 0;
+    p1.vx = 0;
+
+    const active = p0.isUser ? p0 : p1;
+    this.userRole = active.role;
+
+    if (this.audio) {
+      this.audio.playPunch(false);
+    }
+    if (this.sprites) {
+      this.sprites.spawnTurfKick(active.x, active.y, 6);
+    }
+    return active;
   }
 
   getOpponentCountry() {
@@ -247,9 +286,10 @@ class FaustballGame {
     return true;
   }
 
-  startMatch(archetype = 'cannon', isBiergarten = false) {
+  startMatch(archetype = 'cannon', isBiergarten = false, userRole = 'attacker') {
     this.selectedArchetype = archetype;
     this.isBiergarten = isBiergarten;
+    this.userRole = userRole;
     this.scoreLeft = 0;
     this.scoreRight = 0;
     this.setsLeft = 0;
@@ -259,48 +299,65 @@ class FaustballGame {
       this.ai.setDifficulty(this.getOpponentCountry());
     }
 
+    this._initPlayers(userRole);
     this._resetPlayerPositions();
-    this.serveBall('left');
+
+    this.servingTeam = 'left';
+    this.serveCooldown = 8.0;
     this.state = this.STATE_SERVING;
+
+    // Position ball in server's hands ready for serve
+    const server = this.playersLeft.find(p => p.isUser) || this.playersLeft[0];
+    if (this.physics) {
+      this.physics.resetServe('left', server.x + 12, server.y - 45);
+    }
   }
 
   _resetPlayerPositions() {
-    this.playersLeft[0].x = 170;
-    this.playersLeft[0].y = this.groundY;
-    this.playersLeft[0].vx = 0;
-    this.playersLeft[0].vy = 0;
-    this.playersLeft[0].state = 'idle';
+    if (this.playersLeft[0]) {
+      this.playersLeft[0].x = 170;
+      this.playersLeft[0].y = this.groundY;
+      this.playersLeft[0].vx = 0;
+      this.playersLeft[0].vy = 0;
+      this.playersLeft[0].state = 'idle';
+    }
 
-    this.playersLeft[1].x = 290;
-    this.playersLeft[1].y = this.groundY;
-    this.playersLeft[1].vx = 0;
-    this.playersLeft[1].vy = 0;
-    this.playersLeft[1].state = 'idle';
+    if (this.playersLeft[1]) {
+      this.playersLeft[1].x = 290;
+      this.playersLeft[1].y = this.groundY;
+      this.playersLeft[1].vx = 0;
+      this.playersLeft[1].vy = 0;
+      this.playersLeft[1].state = 'idle';
+    }
 
-    this.playersRight[0].x = 510;
-    this.playersRight[0].y = this.groundY;
-    this.playersRight[0].vx = 0;
-    this.playersRight[0].vy = 0;
-    this.playersRight[0].state = 'idle';
+    if (this.playersRight[0]) {
+      this.playersRight[0].x = 510;
+      this.playersRight[0].y = this.groundY;
+      this.playersRight[0].vx = 0;
+      this.playersRight[0].vy = 0;
+      this.playersRight[0].state = 'idle';
+    }
 
-    this.playersRight[1].x = 650;
-    this.playersRight[1].y = this.groundY;
-    this.playersRight[1].vx = 0;
-    this.playersRight[1].vy = 0;
-    this.playersRight[1].state = 'idle';
+    if (this.playersRight[1]) {
+      this.playersRight[1].x = 650;
+      this.playersRight[1].y = this.groundY;
+      this.playersRight[1].vx = 0;
+      this.playersRight[1].vy = 0;
+      this.playersRight[1].state = 'idle';
+    }
   }
 
   serveBall(servingTeam = 'left') {
     if (!this.physics) return;
-    const serverX = servingTeam === 'left' ? 140 : 660;
-    const serverY = 320;
-    this.physics.resetServe(servingTeam, serverX, serverY);
 
-    // Initial serve velocity across ribbon into opponent court
     if (servingTeam === 'left') {
-      this.physics.hitBall('left', 'player_user', 'serve', { vx: 360, vy: -380 });
+      const server = this.playersLeft.find(p => p.isUser) || this.playersLeft[0];
+      this.physics.resetServe('left', server.x, server.y - 40);
+      this.physics.hitBall('left', server.id, 'serve', { vx: 370, vy: -390 });
     } else {
-      this.physics.hitBall('right', 'opp_back', 'serve', { vx: -360, vy: -380 });
+      const server = this.playersRight[1] || this.playersRight[0];
+      this.physics.resetServe('right', server.x, server.y - 40);
+      this.physics.hitBall('right', server.id, 'serve', { vx: -370, vy: -390 });
     }
 
     if (this.audio) {
@@ -344,8 +401,10 @@ class FaustballGame {
       if (this.audio) this.audio.playWhistle();
     } else {
       // Continue next set
+      this.servingTeam = winner;
       this.state = this.STATE_SERVING;
-      this.serveCooldown = 1.5;
+      this.serveCooldown = this.servingTeam === 'left' ? 8.0 : 1.4;
+      this._resetPlayerPositions();
     }
   }
 
@@ -366,9 +425,10 @@ class FaustballGame {
       if (this.ai) {
         this.ai.setDifficulty(this.getOpponentCountry());
       }
+      this.servingTeam = 'left';
       this.state = this.STATE_SERVING;
+      this.serveCooldown = 8.0;
       this._resetPlayerPositions();
-      this.serveCooldown = 1.5;
     }
   }
 
@@ -389,11 +449,39 @@ class FaustballGame {
       }
     }
 
-    // Serving cooldown
+    // Serving state: interactive manual serve for user, timed serve for opponent
     if (this.state === this.STATE_SERVING) {
-      this.serveCooldown -= dt;
-      if (this.serveCooldown <= 0) {
-        this.serveBall('left');
+      // 1. Allow user movement & player switching during serve setup
+      this._updateUserPlayer(dt, true /* isServingMode */);
+
+      // Keep ball positioned with active server
+      if (this.physics && this.physics.ball) {
+        if (this.servingTeam === 'left') {
+          const server = this.playersLeft.find(p => p.isUser) || this.playersLeft[0];
+          this.physics.ball.x = server.x + 14;
+          this.physics.ball.y = server.y - 45;
+          this.physics.ball.vx = 0;
+          this.physics.ball.vy = 0;
+
+          // Check manual user serve trigger (Space, Enter, or Touch Hit)
+          const serveTrigger = this.keys['Space'] || this.keys['Enter'] || this.touchControls.hit;
+          if (serveTrigger) {
+            this.serveBall('left');
+            return;
+          }
+
+          // Fallback auto-serve countdown if user is idle
+          this.serveCooldown -= dt;
+          if (this.serveCooldown <= 0) {
+            this.serveBall('left');
+          }
+        } else {
+          // Opponent serving countdown
+          this.serveCooldown -= dt;
+          if (this.serveCooldown <= 0) {
+            this.serveBall('right');
+          }
+        }
       }
       return;
     }
@@ -407,7 +495,7 @@ class FaustballGame {
           this.handleSetWin(setWinner);
         } else {
           this.state = this.STATE_SERVING;
-          this.serveCooldown = 1.0;
+          this.serveCooldown = this.servingTeam === 'left' ? 8.0 : 1.4;
           this._resetPlayerPositions();
         }
       }
@@ -416,10 +504,10 @@ class FaustballGame {
 
     // Active Rally Update
     if (this.state === this.STATE_RALLY && this.physics) {
-      // 1. Process User Player Input
-      this._updateUserPlayer(dt);
+      // 1. Process User Player Input & Ball Interactions
+      this._updateUserPlayer(dt, false /* isServingMode */);
 
-      // 2. Process AI Subsystem
+      // 2. Process AI Subsystem for teammate and opponent bots
       if (this.ai) {
         this.ai.update(dt, this.physics.ball, this.playersLeft, this.playersRight, this.physics);
       }
@@ -440,16 +528,29 @@ class FaustballGame {
     }
   }
 
-  _updateUserPlayer(dt) {
-    const user = this.playersLeft[0];
-    const arch = this.archetypes[this.selectedArchetype] || this.archetypes.cannon;
-    let speed = arch.speed;
+  _updateUserPlayer(dt, isServingMode = false) {
+    const user = this.playersLeft.find(p => p.isUser) || this.playersLeft[0];
+    if (!user) return;
 
-    // Input interpretation (Left / Right)
+    const arch = this.archetypes[this.selectedArchetype] || this.archetypes.cannon;
+    const speed = arch.speed;
+
+    // Player Switch Key (Q, Tab, or Touch Switch)
+    const switchTrigger = this.keys['KeyQ'] || this.keys['Tab'] || this.touchControls.switch;
+    if (switchTrigger && (!this._switchCooldown || this._switchCooldown <= 0)) {
+      this._switchCooldown = 0.35;
+      this.switchUserPlayer();
+      return;
+    }
+    if (this._switchCooldown > 0) {
+      this._switchCooldown -= dt;
+    }
+
+    // Left / Right Movement Input
     let moveLeft = this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchControls.left;
     let moveRight = this.keys['ArrowRight'] || this.keys['KeyD'] || this.touchControls.right;
 
-    // Biergarten Mode Inversion!
+    // Biergarten Mode Inversion
     if (this.isBiergarten) {
       const temp = moveLeft;
       moveLeft = moveRight;
@@ -477,19 +578,13 @@ class FaustballGame {
         user.vy = -arch.jumpPower;
       }
 
-      // Dive input ("Hechtbagger")
+      // Dive input ("Hechtbagger" grass slide)
       const diveKey = this.keys['ArrowDown'] || this.keys['KeyS'] || this.touchControls.dive;
-      if (diveKey && user.y >= this.groundY - 2) {
+      if (diveKey && user.y >= this.groundY - 2 && !isServingMode) {
         user.state = 'diving';
         user.diveTimer = this.selectedArchetype === 'iron_wall' ? 0.45 : 0.65;
         user.vx = user.facing === 'right' ? 330 : -330;
         if (this.sprites) this.sprites.spawnTurfKick(user.x, user.y, 8);
-      }
-
-      // Hit / Spike input
-      const hitKey = this.keys['Space'] || this.keys['Enter'] || this.touchControls.hit;
-      if (hitKey && (!user.hitCooldown || user.hitCooldown <= 0)) {
-        this._tryUserHit(user, arch);
       }
 
       // Special Ability activation
@@ -497,60 +592,100 @@ class FaustballGame {
       if (specialKey && this.canActivateSpecial()) {
         this.activateSpecial();
       }
+
+      // In active rally: detect manual hit key and automatic body contact bump
+      if (!isServingMode && this.physics && this.physics.ball) {
+        const ball = this.physics.ball;
+        const dx = ball.x - user.x;
+        const dy = ball.y - (user.y - 20);
+        const reach = this.selectedArchetype === 'iron_wall' ? 52 : 42;
+        const dist = Math.hypot(dx, dy);
+        const hitKey = this.keys['Space'] || this.keys['Enter'] || this.touchControls.hit;
+
+        if (hitKey && (!user.hitCooldown || user.hitCooldown <= 0)) {
+          // Manual Hit: Power spike / directed smash
+          if (dist <= reach + 16) {
+            this._tryUserHit(user, arch, true /* isManualHit */);
+          }
+        } else if (dist <= reach && (!user.hitCooldown || user.hitCooldown <= 0)) {
+          // Auto-Contact Bump: Arcade-style contact so the ball never drops through player
+          this._tryUserHit(user, arch, false /* autoBump */);
+        }
+      }
     }
   }
 
-  _tryUserHit(user, arch) {
-    if (!this.physics) return;
+  _tryUserHit(user, arch, isManualHit = true) {
+    if (!this.physics || !this.physics.ball) return;
     const ball = this.physics.ball;
-    const dx = ball.x - user.x;
-    const dy = ball.y - (user.y - 20);
-    const reach = this.selectedArchetype === 'iron_wall' ? 48 : 38;
-    const dist = Math.hypot(dx, dy);
+    const isAerial = user.y < this.groundY - 20;
+    const currentTouches = this.physics.rallyState.touchesTeamLeft;
 
-    if (dist <= reach) {
-      user.hitCooldown = 0.32;
-      const isAerial = user.y < this.groundY - 20;
-      const currentTouches = this.physics.rallyState.touchesTeamLeft;
+    user.hitCooldown = 0.32;
 
-      let hitType = 'dig';
-      let vx = 220;
-      let vy = -420;
+    const moveRight = this.keys['ArrowRight'] || this.keys['KeyD'] || this.touchControls.right;
+    const moveLeft = this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchControls.left;
 
+    let hitType = 'dig';
+    let vx = 220;
+    let vy = -420;
+
+    if (isManualHit) {
+      // Manual Player Hit (Power Spike or Tactical Placement)
       if (isAerial || currentTouches === 2) {
-        // Attack / Spike over ribbon
         hitType = 'spike';
-        vx = 480 * (arch.spikeMultiplier || 1.0);
+        vx = 490 * (arch.spikeMultiplier || 1.0);
         vy = -160;
 
+        if (moveRight) {
+          vx += 80;
+          vy += 25; // Hard flat drive deep into back corner
+        } else if (moveLeft) {
+          vx -= 130;
+          vy -= 80; // Delicate drop shot over ribbon
+        }
+
         if (this.specialActive && this.selectedArchetype === 'cannon') {
-          vx = 680;
+          vx = 690;
           vy = -110;
         } else if (this.specialActive && this.selectedArchetype === 'spin_master') {
-          vx = 390;
-          vy = -280; // Tricky high spin
+          vx = 410;
+          vy = -290;
         }
       } else if (currentTouches === 0) {
-        // Reception dig
         hitType = 'dig';
-        vx = 140;
-        vy = -450;
+        vx = 150;
+        vy = -460;
       } else {
-        // Set
         hitType = 'set';
         vx = 100;
-        vy = -490;
+        vy = -500;
       }
+    } else {
+      // Automatic Contact Bump (Arcade responsive return)
+      if (currentTouches === 0) {
+        hitType = 'dig';
+        vx = 140;
+        vy = -440;
+      } else if (currentTouches === 1) {
+        hitType = 'set';
+        vx = 90;
+        vy = -480;
+      } else {
+        hitType = 'spike';
+        vx = 370;
+        vy = -260; // Safe drive across ribbon
+      }
+    }
 
-      this.physics.hitBall('left', user.id, hitType, { vx, vy });
-      this.chargeSpecial(15);
+    this.physics.hitBall('left', user.id, hitType, { vx, vy });
+    this.chargeSpecial(isManualHit ? 15 : 8);
 
-      if (this.audio) {
-        this.audio.playPunch(hitType === 'spike');
-      }
-      if (this.sprites) {
-        this.sprites.spawnImpactBurst(ball.x, ball.y);
-      }
+    if (this.audio) {
+      this.audio.playPunch(hitType === 'spike');
+    }
+    if (this.sprites) {
+      this.sprites.spawnImpactBurst(ball.x, ball.y);
     }
   }
 
@@ -562,12 +697,14 @@ class FaustballGame {
       this.scoreLeft++;
       this.totalTournamentPoints += Math.round(100 * this.getScoreMultiplier());
       this.chargeSpecial(20);
+      this.servingTeam = 'left';
       if (this.audio) {
         this.audio.playPointScored();
         this.audio.playCheer();
       }
     } else {
       this.scoreRight++;
+      this.servingTeam = 'right';
       if (this.audio) {
         this.audio.playWhistle();
       }
@@ -593,13 +730,13 @@ class FaustballGame {
       ribbonHeight: this.ribbonHeight
     }, this.width, this.height);
 
-    // 2. Draw Left Players
+    // 2. Draw Left Players with YOU indicator on active user player
     const leftJersey = { primary: '#f8fafc', secondary: '#0f172a' };
-    this.playersLeft.forEach((p, idx) => {
-      this.sprites.drawPlayer(this.ctx, p, idx === 0 ? this.selectedArchetype : 'iron_wall', leftJersey, this.isBiergarten);
+    this.playersLeft.forEach((p) => {
+      this.sprites.drawPlayer(this.ctx, p, p.isUser ? this.selectedArchetype : 'iron_wall', leftJersey, this.isBiergarten);
     });
 
-    // 3. Draw Right Players
+    // 3. Draw Right Players (Opponent Bots)
     const oppTier = this.tournamentStages[this.tournamentStage];
     const rightJersey = oppTier ? oppTier.colors : { primary: '#dc2626', secondary: '#ffffff' };
     this.playersRight.forEach((p, idx) => {
@@ -613,6 +750,11 @@ class FaustballGame {
 
     // 5. Draw Particle System
     this.sprites.drawParticles(this.ctx);
+
+    // 6. Draw Serving & Match Status Banner on Canvas
+    if (this.state === this.STATE_SERVING && typeof this.sprites.drawServingPrompt === 'function') {
+      this.sprites.drawServingPrompt(this.ctx, this.servingTeam, this.width, this.height);
+    }
   }
 }
 

@@ -1,22 +1,23 @@
-# 🏐 Faustball World Tour 2026
+# 🏐 Faustball World Tour 2026 (Retro-Arcade Fistball)
 
-> **The World's Fastest Grass Field Sport:** Can you master the legendary 1-bounce rule and dive like a champion to win the World Faustball Cup?
+> **Experience the thrill of Europe's fastest grass sport!** Direct player control, authentic 1-bounce grass rules, diving saves ("Hechtbagger"), high-velocity power spikes, and cooperative teammate 2v2 action.
 
-A fast, funny, retro-arcade 2v2 Faustball (Fistball) game built with 100% vanilla Web standards and zero external dependencies, inspired by the architecture of `teams-fogger-amsterdam`.
+A high-performance, zero-dependency, retro-arcade Faustball game built with HTML5 Canvas 2D and the Web Audio API.
 
 ---
 
 ## 🎮 Play Online
 
-Once deployed to GitHub Pages, the live game is available at:  
+Play immediately in your browser on GitHub Pages:
 👉 **[https://diver80.github.io/faustball/](https://diver80.github.io/faustball/)**
 
 ---
 
-## 📖 The Sport & Rules
+## 📖 What is Faustball (Fistball)?
 
-Faustball (Fistball) is one of humanity's oldest team sports, played on manicured grass courts divided by a 2-meter ribbon tape ("Die Leine"):
+Faustball is one of the world's oldest and most dynamic athletic field sports, dating back to ancient Rome and standardized in Germany, Austria, and Switzerland:
 
+- **Direct Player Control:** You are in direct control of your player! Look for the golden **▼ YOU** floating indicator and the pulsing grass aura under your feet. Press <kbd>Q</kbd> or <kbd>Tab</kbd> anytime to toggle control between your front attacker and back defender.
 - **The 1-Bounce Rule:** Unlike volleyball, the ball is permitted to bounce on the grass **once** between consecutive player touches! A second consecutive bounce without a hit awards a point to the opponent.
 - **3 Touches Maximum:**
   - **Touch 1 (Abwehr / Dig):** Absorb blistering spikes with a forearm bump or grass dive ("Hechtbagger") to pop the ball high.
@@ -29,16 +30,18 @@ Faustball (Fistball) is one of humanity's oldest team sports, played on manicure
 
 ## 🕹️ Controls
 
-| Platform | Controls |
+| Platform / Action | Controls |
 | :--- | :--- |
+| **Active Player Identity** | Golden **▼ YOU** badge overhead + glowing turf ring |
 | **Move Left / Right** | Arrow Keys <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> |
 | **Jump** | <kbd>↑</kbd> or <kbd>W</kbd> |
 | **Grass Dive ("Hechtbagger")** | <kbd>↓</kbd> or <kbd>S</kbd> |
-| **Hit / Spike** | <kbd>Space</kbd> or <kbd>Enter</kbd> |
+| **Serve & Power Spike** | <kbd>Space</kbd> or <kbd>Enter</kbd> (Auto-bump on body contact!) |
+| **Switch Player** | <kbd>Q</kbd> or <kbd>Tab</kbd> (or HUD button 🔁) |
 | **Special Ability** | <kbd>Shift</kbd> (when Special Meter is full) |
 | **Pause / Resume** | <kbd>P</kbd> or <kbd>Escape</kbd> |
-| **Mobile / Tablet** | On-screen Virtual D-Pad buttons + Action buttons (Jump, Dive, Hit, Special) |
-| **Sound Toggle** | Sound button in the top HUD (Web Audio API procedural sound engine) |
+| **Mobile / Tablet** | Virtual D-Pad + Jump, Dive, Hit, Switch & Special buttons |
+| **Sound Toggle** | Sound button in top HUD (Web Audio API procedural sound engine) |
 
 ---
 
@@ -80,41 +83,11 @@ Advance through 4 stages against the world's most formidable Faustball nations:
 
 ---
 
-## 🚀 Publishing to GitHub Pages (`diver80`)
-
-This repository is configured with zero dependencies and a GitHub Actions workflow ready to publish in minutes.
-
-### Step 1: Commit Your Changes
-```bash
-git add .
-git commit -m "feat: complete Faustball game ready for GitHub Pages"
-```
-
-### Step 2: Push to GitHub
-```bash
-# If remote is already added:
-git push -u origin main
-
-# Or add your remote repository:
-git remote add origin https://github.com/diver80/faustball.git
-git push -u origin main
-```
-
-### Step 3: Enable GitHub Pages
-1. Go to your repository on GitHub: `https://github.com/diver80/faustball`
-2. Click **Settings** ➡️ **Pages** (under Code and automation in the left sidebar).
-3. Under **Build and deployment** > **Source**:
-   - Select **GitHub Actions** (the included `.github/workflows/deploy.yml` will automatically build and publish).
-4. Within 1 minute, your game will be live at:
-   `https://diver80.github.io/faustball/`!
-
----
-
 ## 🛠️ Tech Stack & Architecture
 
 - **Zero External Client Dependencies:** 100% vanilla HTML5, CSS3, and JavaScript (ES6+).
-- **Procedural Canvas 2D Engine (`js/sprites.js`):** High-DPI procedural rendering with animated players, lawnmower-striped grass, grandstand spectators, and red/white striped ribbon tape.
+- **Procedural Canvas 2D Engine (`js/sprites.js`):** High-DPI procedural rendering with animated players, lawnmower-striped grass, grandstand spectators, overhead YOU indicators, and red/white striped ribbon tape.
 - **Web Audio API Sound Synthesizer (`js/audio.js`):** Procedural fist impacts, turf thuds, metallic tape pings, referee whistle trill, crowd cheers, and Bavarian brass fanfare with zero audio asset loading lag.
 - **Faustball Physics & Rules (`js/physics.js`):** Deterministic 2D projectile physics with strict 1-bounce grass rule, 3-touch limit, and ribbon clearance validation.
-- **Tactical 2v2 AI (`js/ai.js`):** Analytical trajectory prediction, teammate cooperation, and tiered opponent AI profiles.
+- **Tactical 2v2 AI (`js/ai.js`):** Analytical trajectory prediction, teammate cooperation adapting dynamically to the active user player, and tiered opponent AI profiles.
 - **Automated Test Suite (`tests/`):** Headless Node.js integration tests for physics, rules, audio, sprites, AI, and game state.

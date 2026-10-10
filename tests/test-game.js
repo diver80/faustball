@@ -12,8 +12,17 @@ assert.strictEqual(game.tournamentStage, 0);
 assert.strictEqual(game.selectedArchetype, 'cannon');
 
 // Test 2: Point scoring and set win (11 points, win by 2)
-game.startMatch('cannon', false);
+game.startMatch('cannon', false, 'attacker');
 assert.strictEqual(game.state, 'SERVING');
+assert.strictEqual(game.userRole, 'attacker');
+assert.strictEqual(game.playersLeft[1].isUser, true, 'Attacker should be user');
+assert.strictEqual(game.playersLeft[0].isUser, false, 'Defender should be AI teammate');
+
+// Test player switching
+const newActive = game.switchUserPlayer();
+assert.strictEqual(newActive.isUser, true);
+assert.strictEqual(game.playersLeft[0].isUser, true, 'Defender is now user after switch');
+assert.strictEqual(game.playersLeft[1].isUser, false, 'Attacker is now AI teammate after switch');
 
 // Award 10 points to left, 10 to right (Deuce)
 game.scoreLeft = 10;
@@ -61,5 +70,14 @@ assert.strictEqual(game.specialMeter, 100, 'Special meter caps at 100');
 assert.strictEqual(game.canActivateSpecial(), true);
 game.activateSpecial();
 assert.strictEqual(game.specialMeter, 0, 'Activating special resets meter');
+
+// Test 7: Manual Serve Trigger
+game.startMatch('spin_master', false, 'defender');
+assert.strictEqual(game.state, 'SERVING');
+assert.strictEqual(game.servingTeam, 'left');
+game.keys['Space'] = true;
+game.update(0.016);
+assert.strictEqual(game.state, 'RALLY', 'Pressing Space during serve should start rally');
+game.keys['Space'] = false;
 
 console.log('PASS: test-game.js passed');

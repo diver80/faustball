@@ -16,6 +16,7 @@ assert.strictEqual(typeof renderer.drawPitch, 'function');
 assert.strictEqual(typeof renderer.drawPlayer, 'function');
 assert.strictEqual(typeof renderer.drawBall, 'function');
 assert.strictEqual(typeof renderer.drawParticles, 'function');
+assert.strictEqual(typeof renderer.drawServingPrompt, 'function');
 assert.strictEqual(typeof renderer.spawnTurfKick, 'function');
 assert.strictEqual(typeof renderer.spawnFlameTrail, 'function');
 
@@ -49,6 +50,7 @@ const mockCtx = {
   lineTo: () => {},
   arc: () => {},
   rect: () => {},
+  roundRect: () => {},
   fill: () => {},
   stroke: () => {},
   fillRect: () => {},
@@ -73,8 +75,10 @@ const court = { width: 800, height: 450, groundY: 400, ribbonX: 400, ribbonHeigh
 assert.doesNotThrow(() => {
   renderer.drawPitch(mockCtx, court, 800, 450);
   renderer.drawBall(mockCtx, { x: 300, y: 250, vx: 50, vy: -50, radius: 8 }, 400);
-  renderer.drawPlayer(mockCtx, { x: 250, y: 360, vx: 10, vy: 0, state: 'idle', facing: 'right' }, 'cannon', { primary: '#fff', secondary: '#000' }, false);
-  renderer.drawPlayer(mockCtx, { x: 250, y: 360, vx: 10, vy: 0, state: 'diving', facing: 'right' }, 'iron_wall', { primary: '#c00', secondary: '#fff' }, true);
+  renderer.drawPlayer(mockCtx, { x: 250, y: 360, vx: 10, vy: 0, state: 'idle', facing: 'right', isUser: true }, 'cannon', { primary: '#fff', secondary: '#000' }, false);
+  renderer.drawPlayer(mockCtx, { x: 250, y: 360, vx: 10, vy: 0, state: 'diving', facing: 'right', isUser: false }, 'iron_wall', { primary: '#c00', secondary: '#fff' }, true);
+  renderer.drawServingPrompt(mockCtx, 'left', 800, 450);
+  renderer.drawServingPrompt(mockCtx, 'right', 800, 450);
   renderer.drawParticles(mockCtx);
 });
 

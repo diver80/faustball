@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Faustball World Tour 2026 — Retro-Arcade Fistball</title>
-  <meta name="description" content="Experience fast-paced 2v2 Faustball (Fistball) arcade action! Master the authentic 1-bounce rule, grass diving saves, and power fist smashes.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🏐</text></svg>">
+  <meta name="description" content="Experience fast-paced 2v2 Faustball (Fistball) arcade action! Control your player, master the authentic 1-bounce rule, grass diving saves, and power fist smashes.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%22.9em%22 font-size=%2290%22>🏐</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -42,6 +42,7 @@
         </div>
       </div>
       <div class="hud-controls">
+        <button id="switchBtn" class="btn-small btn-switch" aria-label="Switch Controlled Player">🔁 Switch (Q)</button>
         <button id="biergartenBtn" class="btn-small" aria-label="Toggle Biergarten Mode">🍺 Biergarten: OFF</button>
         <button id="muteBtn" class="btn-small" aria-label="Toggle Sound">🔊 Sound: ON</button>
         <button id="pauseBtn" class="btn-small" aria-label="Pause Game">⏸️ Pause</button>
@@ -50,15 +51,33 @@
 
     <!-- Canvas Container -->
     <div class="canvas-container">
-      <canvas id="gameCanvas" width="800" height="450"></canvas>
+      <canvas id="gameCanvas" width="800" height="450" tabindex="0"></canvas>
 
       <!-- 1. Start / Character Select Modal -->
       <div id="startModal" class="modal-overlay">
         <div class="modal-content">
           <h2 class="modal-title">🏐 WELCOME TO FAUSTBALL!</h2>
           <p class="modal-subtitle">
-            Lead your 2-player squad through the International Faustball Championship! The ball is allowed to <strong>bounce once on grass between hits</strong>. Set the ball near the 2m center ribbon and smash it home!
+            Step onto the turf as a star athlete in the International Faustball Championship! Look for the <strong>golden "YOU" badge</strong> above your player. The ball is allowed to <strong>bounce once on grass between hits</strong>.
           </p>
+
+          <div class="character-selection-title">CHOOSE YOUR POSITION:</div>
+          <div class="position-selection-grid">
+            <div class="position-card selected" data-role="attacker">
+              <span class="pos-icon">⚡</span>
+              <div class="pos-info">
+                <span class="pos-name">Front Court (Attacker / Ribbon Spiker)</span>
+                <span class="pos-desc">Positioned right at the 2m Leine — set up attacks and smash spikes into opponent turf!</span>
+              </div>
+            </div>
+            <div class="position-card" data-role="defender">
+              <span class="pos-icon">🛡️</span>
+              <div class="pos-info">
+                <span class="pos-name">Back Court (Defender / Sweeper)</span>
+                <span class="pos-desc">Guard the deep baseline — execute diving grass saves ("Hechtbagger")!</span>
+              </div>
+            </div>
+          </div>
 
           <div class="character-selection-title">CHOOSE YOUR STAR ATHLETE:</div>
           <div class="character-grid">
@@ -148,6 +167,16 @@
       </div>
     </div>
 
+    <!-- Direct On-Screen Controls Guide Bar -->
+    <div class="controls-guide-bar">
+      <span class="guide-item"><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd> Move</span>
+      <span class="guide-item"><kbd>W</kbd> / <kbd>↑</kbd> Jump</span>
+      <span class="guide-item"><kbd>S</kbd> / <kbd>↓</kbd> Dive</span>
+      <span class="guide-item highlight"><kbd>SPACE</kbd> Spike / Serve</span>
+      <span class="guide-item switch-badge"><kbd>Q</kbd> Switch Player</span>
+      <span class="guide-item"><kbd>SHIFT</kbd> Special</span>
+    </div>
+
     <!-- Mobile Touch Controller -->
     <div class="mobile-controls" id="mobileControls">
       <div class="touch-cluster-dpad">
@@ -158,6 +187,7 @@
         <button class="touch-btn" id="touchJump">JUMP ⬆️</button>
         <button class="touch-btn" id="touchDive">DIVE ⬇️</button>
         <button class="touch-btn hit" id="touchHit">HIT 💥</button>
+        <button class="touch-btn switch" id="touchSwitch">SWITCH 🔁</button>
         <button class="touch-btn special" id="touchSpecial">SPECIAL ⭐</button>
       </div>
     </div>
@@ -167,10 +197,11 @@
       <h3>📖 Authentic Faustball (Fistball) Rules & Controls</h3>
       <p>Faustball is an athletic grass sport dating back to ancient Rome, standardized in Germany and Austria:</p>
       <ul>
+        <li><strong>You Are in Direct Control:</strong> Look for the glowing golden ring and <strong>▼ YOU</strong> floating indicator above your player! Press <kbd>Q</kbd> anytime to switch between the front spiker and back defender.</li>
         <li><strong>The 1-Bounce Rule:</strong> The ball is permitted to bounce on the grass <em>once</em> between consecutive touches. A second consecutive bounce without a hit awards a point to the opponent.</li>
         <li><strong>3 Touches Max:</strong> Touch 1: Defense dig/reception -> Touch 2: High setter pass -> Touch 3: Spiking punch or strategic drive over the ribbon.</li>
         <li><strong>Center Ribbon ("Die Leine"):</strong> Suspended at 2.0m height with red/white stripes. Hitting the ribbon or passing below is an immediate fault.</li>
-        <li><strong>Controls:</strong> <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to run • <kbd>↑</kbd> or <kbd>W</kbd> to Jump • <kbd>↓</kbd> or <kbd>S</kbd> to Dive ("Hechtbagger") • <kbd>Space</kbd> to Hit/Spike • <kbd>Shift</kbd> to unleash Special Ability!</li>
+        <li><strong>Controls:</strong> <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to run • <kbd>↑</kbd> or <kbd>W</kbd> to Jump • <kbd>↓</kbd> or <kbd>S</kbd> to Dive ("Hechtbagger") • <kbd>Space</kbd> to Serve & Power Spike • <kbd>Q</kbd> to Switch Active Player • <kbd>Shift</kbd> to unleash Special Ability!</li>
       </ul>
     </footer>
   </main>
@@ -187,6 +218,7 @@
     (function () {
       const canvas = document.getElementById('gameCanvas');
       const game = new FaustballGame({ canvas, width: 800, height: 450 });
+      window.faustballGame = game;
 
       // HUD Elements
       const scoreDisplay = document.getElementById('scoreDisplay');
@@ -194,6 +226,7 @@
       const touchesDisplay = document.getElementById('touchesDisplay');
       const stageDisplay = document.getElementById('stageDisplay');
       const specialMeterFill = document.getElementById('specialMeterFill');
+      const switchBtn = document.getElementById('switchBtn');
       const biergartenBtn = document.getElementById('biergartenBtn');
       const muteBtn = document.getElementById('muteBtn');
       const pauseBtn = document.getElementById('pauseBtn');
@@ -210,6 +243,16 @@
       const biergartenToggle = document.getElementById('biergartenModalToggle');
 
       let selectedChar = 'cannon';
+      let selectedRole = 'attacker';
+
+      // Position selection clicks
+      document.querySelectorAll('.position-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.position-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedRole = card.dataset.role;
+        });
+      });
 
       // Character selection clicks
       document.querySelectorAll('.character-card').forEach(card => {
@@ -220,24 +263,44 @@
         });
       });
 
+      // Switch Player Button
+      function updateSwitchBtnUI() {
+        const active = game.playersLeft ? game.playersLeft.find(p => p.isUser) : null;
+        if (active) {
+          switchBtn.textContent = active.role === 'attacker' ? '⚡ Front (Q)' : '🛡️ Back (Q)';
+        }
+      }
+
+      switchBtn.addEventListener('click', () => {
+        game.switchUserPlayer();
+        updateSwitchBtnUI();
+        canvas.focus();
+      });
+
       // Start match
       startBtn.addEventListener('click', () => {
         const isBier = biergartenToggle.checked;
-        game.startMatch(selectedChar, isBier);
+        game.startMatch(selectedChar, isBier, selectedRole);
         startModal.style.display = 'none';
         updateBiergartenBtnUI();
+        updateSwitchBtnUI();
+        canvas.focus();
       });
 
       // Next stage
       nextStageBtn.addEventListener('click', () => {
         game.advanceTournament();
         stageWinModal.style.display = 'none';
+        updateSwitchBtnUI();
+        canvas.focus();
       });
 
       // Rematch
       retryBtn.addEventListener('click', () => {
-        game.startMatch(selectedChar, game.isBiergarten);
+        game.startMatch(selectedChar, game.isBiergarten, selectedRole);
         gameOverModal.style.display = 'none';
+        updateSwitchBtnUI();
+        canvas.focus();
       });
 
       // Play Again
@@ -281,10 +344,23 @@
         }
       });
 
-      // Keyboard listeners
+      // Keyboard listeners with scroll prevention
+      const gameActionCodes = new Set([
+        'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+        'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'Tab'
+      ]);
+
       window.addEventListener('keydown', e => {
+        if (gameActionCodes.has(e.code)) {
+          e.preventDefault();
+        }
+
         game.keys[e.code] = true;
-        if (e.code === 'KeyP' || e.code === 'Escape') {
+
+        if (e.code === 'KeyQ' || e.code === 'Tab') {
+          game.switchUserPlayer();
+          updateSwitchBtnUI();
+        } else if (e.code === 'KeyP' || e.code === 'Escape') {
           pauseBtn.click();
         }
       });
@@ -294,20 +370,47 @@
       });
 
       // Mobile Touch Buttons wiring
-      function bindTouch(btnId, prop) {
+      function bindTouch(btnId, prop, customHandler = null) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
-        btn.addEventListener('touchstart', e => { e.preventDefault(); game.touchControls[prop] = true; });
-        btn.addEventListener('touchend', e => { e.preventDefault(); game.touchControls[prop] = false; });
-        btn.addEventListener('mousedown', () => { game.touchControls[prop] = true; });
-        btn.addEventListener('mouseup', () => { game.touchControls[prop] = false; });
+        btn.addEventListener('touchstart', e => {
+          e.preventDefault();
+          if (customHandler) {
+            customHandler();
+          } else {
+            game.touchControls[prop] = true;
+          }
+        });
+        btn.addEventListener('touchend', e => {
+          e.preventDefault();
+          if (!customHandler) {
+            game.touchControls[prop] = false;
+          }
+        });
+        btn.addEventListener('mousedown', () => {
+          if (customHandler) {
+            customHandler();
+          } else {
+            game.touchControls[prop] = true;
+          }
+        });
+        btn.addEventListener('mouseup', () => {
+          if (!customHandler) {
+            game.touchControls[prop] = false;
+          }
+        });
       }
+
       bindTouch('touchLeft', 'left');
       bindTouch('touchRight', 'right');
       bindTouch('touchJump', 'jump');
       bindTouch('touchDive', 'dive');
       bindTouch('touchHit', 'hit');
       bindTouch('touchSpecial', 'special');
+      bindTouch('touchSwitch', null, () => {
+        game.switchUserPlayer();
+        updateSwitchBtnUI();
+      });
 
       // Main Loop
       let lastTime = performance.now();
